@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Bruxinha Bombardeira</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: linear-gradient(#87ceeb, #ffffff);
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const witchImg = new Image();
+  witchImg.src = "bruxinha.png"; // Coloque o PNG da bruxinha com esse nome na mesma pasta
+
+  const villagerImg = new Image();
+  villagerImg.src = "villager.png"; // PNG do aldeão furioso
+
+  const witch = {
+    x: 100,
+    y: canvas.height / 2,
+    width: 64,
+    height: 64,
+    speed: 5
+  };
+
+  let bombs = [];
+  let villagers = [];
+  let score = 0;
+  let gameOver = false;
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowUp") witch.y -= witch.speed * 2;
+    if (e.key === "ArrowDown") witch.y += witch.speed * 2;
+    if (e.key === " ") {
+      bombs.push({ x: witch.x + 40, y: witch.y + 20 });
+    }
+  });
+
+  function spawnVillager() {
+    const y = Math.random() * (canvas.height - 64);
+    villagers.push({ x: canvas.width, y: y, hp: 1 });
+  }
+
+  function update() {
+    if (gameOver) return;
+
+    // Bombas
+    bombs = bombs.map(b => ({ ...b, x: b.x + 6 }));
+    bombs = bombs.filter(b => b.x < canvas.width);
+
+    // Inimigos
+    villagers.forEach(v => v.x -= 2);
+    villagers = villagers.filter(v => v.x > -64 && v.hp > 0);
+
+    // Colisões
+    bombs.forEach(bomb => {
+      villagers.forEach(v => {
+        if (
+          bomb.x < v.x + 64 &&
+          bomb.x + 8 > v.x &&
+          bomb.y < v.y + 64 &&
+          bomb.y + 8 > v.y
+        ) {
+          v.hp = 0;
+          score++;
+        }
+      });
+    });
+
+    // Game Over se a bruxinha for atingida
+    for (let v of villagers) {
+      if (
+        v.x < witch.x + witch.width &&
+        v.x + 64 > witch.x &&
+        v.y < witch.y + witch.height &&
+        v.y + 64 > witch.y
+      ) {
+        gameOver = true;
+      }
+    }
+
+    if (score >= 10) {
+      gameOver = true;
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Desenhar bruxinha
+    ctx.drawImage(witchImg, witch.x, witch.y, witch.width, witch.height);
+
+    // Desenhar bombas
+    ctx.fillStyle = "black";
+    bombs.forEach(b => {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Desenhar aldeões
+    villagers.forEach(v => {
+      ctx.drawImage(villagerImg, v.x, v.y, 64, 64);
+    });
+
+    // HUD
+    ctx.fillStyle = "black";
+    ctx.font = "20px Arial";
+    ctx.fillText("Pontos: " + score, 20, 30);
+
+    // Fim de jogo
+    if (gameOver) {
+      ctx.fillStyle = "red";
+      ctx.font = "40px Arial";
+      ctx.fillText(
+        score >= 10 ? "Vitória!" : "Game Over",
+        canvas.width / 2 - 100,
+        canvas.height / 2
+      );
+    }
+  }
+
+  function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  setInterval(spawnVillager, 2000);
+  gameLoop();
+</script>
+</body>
+</html>
